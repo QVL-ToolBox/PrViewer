@@ -1,0 +1,17 @@
+node_modules
+dist
+*.local
+.vite
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# Build info / logs
+*.tsbuildinfo
+*.log
+
+# Editor / OS
+.idea/
+.DS_Store
