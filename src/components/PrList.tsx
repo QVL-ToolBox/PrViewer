@@ -1,7 +1,5 @@
 import { useMemo } from 'react'
-import { Box, Chip, Stack, Typography } from '@mui/material'
-import FolderRoundedIcon from '@mui/icons-material/FolderRounded'
-import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
+import { Feedback, Heading, Icon, Stack, StatusChip } from '@custhome/ui'
 import type { PrView, Role } from '../types'
 import { PrCard } from './PrCard'
 
@@ -28,32 +26,34 @@ export function PrList({ prs, role, onOpen }: Props) {
 
   if (prs.length === 0) {
     return (
-      <Stack alignItems="center" spacing={2} sx={{ py: 10, color: 'text.secondary' }}>
-        <CheckCircleRoundedIcon sx={{ fontSize: 56, color: 'success.main' }} />
-        <Typography variant="h6" align="center" color="text.secondary">
+      <div className="pr-empty">
+        <Icon name="check" variant="solid" size={56} />
+        <Feedback severity="success">
           {role === 'creator'
             ? 'Aucune de tes PR n’a eu de mise à jour depuis ta dernière visite.'
             : 'Aucune PR à reviewer n’a eu de mise à jour depuis ta dernière visite.'}
-        </Typography>
-      </Stack>
+        </Feedback>
+      </div>
     )
   }
 
   return (
-    <Stack spacing={4}>
+    <Stack gap="xl">
       {groups.map(([repo, items]) => (
-        <Box key={repo}>
-          <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1.5 }}>
-            <FolderRoundedIcon color="primary" />
-            <Typography variant="h6">{repo}</Typography>
-            <Chip label={items.length} size="small" />
-          </Stack>
-          <Stack spacing={1.5}>
+        <Stack key={repo} gap="sm" as="section" label={repo}>
+          <div className="pr-group-header">
+            <Icon name="apps" size={22} />
+            <Heading level={2} size={5} gutterBottom={false}>
+              {repo}
+            </Heading>
+            <StatusChip tone="neutral" label={String(items.length)} size="small" />
+          </div>
+          <Stack gap="sm">
             {items.map((pr) => (
               <PrCard key={pr.id} pr={pr} onOpen={onOpen} />
             ))}
           </Stack>
-        </Box>
+        </Stack>
       ))}
     </Stack>
   )

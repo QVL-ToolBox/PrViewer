@@ -1,29 +1,26 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
-  Alert,
-  AppBar,
-  Badge,
-  Box,
   Button,
-  Chip,
-  CircularProgress,
-  Container,
+  Feedback,
+  IconActionButton,
+  PageScaffold,
+  Spinner,
   Stack,
-  Tab,
-  Tabs,
-  Toolbar,
-  Typography,
-} from '@mui/material'
-import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded'
-import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded'
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded'
+  ThemeToggle,
+  type ChNavbarItem,
+} from '@custhome/ui'
 import { ConfigPanel } from './components/ConfigPanel'
 import { PrList } from './components/PrList'
+import { UpdateLegend } from './components/UpdateLegend'
 import { getProvider } from './providers'
 import { loadConfig, type AppConfig } from './storage'
 import type { PrView, Role } from './types'
-import { UPDATE_META, UPDATE_ORDER } from './updateKind'
 import { usePrViews } from './usePrViews'
+
+const NAV_BASE: { label: string; icon: ChNavbarItem['icon']; href: Role }[] = [
+  { label: 'Mes PR', icon: 'user', href: 'creator' },
+  { label: 'À reviewer', icon: 'check', href: 'reviewer' },
+]
 
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(() => loadConfig())
@@ -37,6 +34,15 @@ export default function App() {
     !editingConfig,
   )
 
+  const navItems = useMemo<ChNavbarItem[]>(
+    () =>
+      NAV_BASE.map((item) => ({
+        ...item,
+        label: `${item.label} (${counts[item.href]})`,
+      })),
+    [counts],
+  )
+
   const handleOpen = useCallback(
     (pr: PrView) => {
       window.open(pr.webUrl, '_blank', 'noopener,noreferrer')
@@ -45,7 +51,6 @@ export default function App() {
     [markSeen],
   )
 
-  // Sous-titre : nom de l'outil + valeurs de config non sensibles.
   const subtitle = useMemo(() => {
     if (!config || !provider) return ''
     const parts = provider.configFields
@@ -69,121 +74,47 @@ export default function App() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="sticky">
-        <Container maxWidth="md">
-          <Toolbar disableGutters sx={{ gap: 2, py: 1.5 }}>
-            <AccountTreeRoundedIcon color="primary" sx={{ fontSize: 38 }} />
-            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="h5" noWrap>
-                Mes pull requests
-              </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                {subtitle}
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={
-                refreshing ? <CircularProgress size={18} color="inherit" /> : <RefreshRoundedIcon />
-              }
-              onClick={refresh}
-              disabled={refreshing}
-            >
+    <PageScaffold
+      title="Pull requests"
+      items={navItems}
+      activeHref={role}
+      onNavigate={(href) => setRole(href as Role)}
+    >
+      <Stack gap="lg">
+        <div className="pr-row pr-row--spread">
+          <span>{subtitle}</span>
+          <div className="pr-row pr-row--tight">
+            <ThemeToggle />
+            <IconActionButton
+              icon="settings"
+              aria-label="Modifier la configuration"
+              onClick={() => setEditingConfig(true)}
+            />
+            <Button onClick={refresh} loading={refreshing} disabled={refreshing}>
               Rafraîchir
             </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              startIcon={<SettingsRoundedIcon />}
-              onClick={() => setEditingConfig(true)}
-            >
-              Config
-            </Button>
-          </Toolbar>
-        </Container>
-      </AppBar>
+          </div>
+        </div>
 
-      <Container maxWidth="md" sx={{ pb: 8 }}>
-        <Tabs
-          value={role}
-          onChange={(_, v: Role) => setRole(v)}
-          sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
-        >
-          <Tab
-            value="creator"
-            sx={{ fontSize: '1rem', py: 2 }}
-            label={
-              <Badge color="primary" badgeContent={counts.creator} showZero sx={{ pr: 1.5 }}>
-                Mes PR
-              </Badge>
-            }
-          />
-          <Tab
-            value="reviewer"
-            sx={{ fontSize: '1rem', py: 2 }}
-            label={
-              <Badge color="primary" badgeContent={counts.reviewer} showZero sx={{ pr: 1.5 }}>
-                À reviewer
-              </Badge>
-            }
-          />
-        </Tabs>
+        {hasLoaded && <UpdateLegend />}
 
-        {hasLoaded && (
-          <Stack
-            direction="row"
-            spacing={1}
-            flexWrap="wrap"
-            useFlexGap
-            alignItems="center"
-            sx={{ mb: 3 }}
-          >
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
-              Légende :
-            </Typography>
-            {UPDATE_ORDER.map((kind) => (
-              <Chip
-                key={kind}
-                size="small"
-                variant="outlined"
-                color={UPDATE_META[kind].color}
-                label={UPDATE_META[kind].label}
-              />
-            ))}
-          </Stack>
-        )}
-
-        {warnings.length > 0 && (
-          <Alert severity="warning" sx={{ mb: 3 }}>
-            {warnings.join(' ')}
-          </Alert>
-        )}
+        {warnings.length > 0 && <Feedback severity="warning">{warnings.join(' ')}</Feedback>}
 
         {error && (
-          <Alert
-            severity="error"
-            sx={{ mb: 3 }}
-            action={
-              <Button color="inherit" size="small" onClick={refresh} disabled={refreshing}>
-                Réessayer
-              </Button>
-            }
-          >
-            {error}
-          </Alert>
+          <Stack gap="sm">
+            <Feedback severity="error" error={error} />
+            <Button variant="secondary" onClick={refresh} disabled={refreshing}>
+              Réessayer
+            </Button>
+          </Stack>
         )}
 
         {refreshing && !hasLoaded ? (
-          <Stack alignItems="center" spacing={2} sx={{ py: 8 }}>
-            <CircularProgress />
-            <Typography color="text.secondary">Récupération des PR et de leur activité…</Typography>
-          </Stack>
+          <Spinner fullPage label="Récupération des PR et de leur activité…" />
         ) : (
           hasLoaded && <PrList prs={visible} onOpen={handleOpen} role={role} />
         )}
-      </Container>
-    </Box>
+      </Stack>
+    </PageScaffold>
   )
 }
